@@ -1,0 +1,678 @@
+<style>
+. {
+    color: black;
+    font-size: 200%;
+    background: #E8E8E8;
+    position: fixed;
+    top: 50%;
+    text-align: center;
+    width:100%;
+}
+.centertext2 {
+    color: black;
+    font-size: 200%;
+    background: #E8E8E8;
+    position: static;
+    top: 50%;
+    text-align: left;
+    width:100%;
+}
+.header {
+    color: black;
+    background: #E8E8E8;
+    position: static;
+    top: 10%;
+    text-align: left;
+    width:100%;
+}
+.header2 {
+    color: black;
+    background: #E8E8E8;
+    position: fixed;
+    text-align: left;
+    width:100%;
+}
+.footer{
+    color: red;
+    background: #E8E8E8;
+    position: fixed;
+    top: 90%;
+    text-align: center;
+    width:100%;
+}
+</style>
+
+Statistics and Data Science in the Insurance Industry
+========================================================
+author: Nathan Lally: Data Scientist @ New England Statistical Society & HSB (Munich Re)
+width: 1366
+height: 768
+date: `r Sys.Date()`
+autosize: true
+
+
+About Me
+========================================================
+<div class="header">Education</div>
+
+* BA Political Science (UConn)
+  * Study abroad in Mexico
+* BA Mathematics/Statistics (UConn)
+  * Thesis: Predictive modeling for long term care insurance claims occurrence
+* MS Mathematics (UConn)
+  * Thesis: Predicting damage to electrical infrastructure during hurricanes using Bayesian spatial modeling techniques
+
+
+
+***
+<div class="header">Career</div>
+
+* General Dynamics Electric Boat
+* The Hartford Insurance Group
+* Pratt & Whitney
+* Hartford Steam Boiler (Munich Re)
+
+<div class="centertext2">Fun</div>
+* Weight lifting
+* Skateboarding
+* Cats
+* Volunteering for the New England Statistical Society
+
+About Me
+========================================================
+<div class="header2">Obligatory cat pictures</div>
+
+<center>
+![Tina](tina2.jpg)
+<center>
+
+***
+
+<center>
+![Tina](chu.jpg)
+<center>
+
+My Current Job
+========================================================
+<div class="header">Hartford Steam Boiler (Munich Re)</div>
+
+Sr. Machine Learning Modeler
+* Responsibilities:
+  * Core Product Pricing Models
+  * IoT Product Development & Modeling
+  * Claims analytics
+  * Internal Training & Education
+  * Mentoring Jr. Modelers
+
+My Current Job
+========================================================
+<div class="header">So what do I spend most of my time doing?</div>
+
+I build statistical and machine learning models to predict the price (premium) we should charge consumers for,
+
+* Commercial & personal lines equipment breakdown insurance
+* Commercial & personal lines service lines insurance
+* Employment practices liability insurance
+* And more to come!
+
+So let me take you on a journey through the world of insurance product pricing. Excitement abounds at every turn!
+
+A Primer on Insurance Product Pricing
+========================================================
+<div class="header">Insurance is a strange business...</div>
+
+Most products or services are fairly easy to price.
+
+$$
+\begin{align}
+  \text{Price} &= \text{Expenses} + \text{Desired Profit}
+\end{align}
+$$
+
+This is a somewhat simplified model, but expenses (material, manufacturing, distribution, marketing, etc.) are typically fixed or reasonably easy to estimate. 
+
+What makes insurance products different?
+
+
+A Primer on Insurance Product Pricing
+========================================================
+<div class="header">Insurance is a strange business...</div>
+
+Insurance products are not easy to price.
+
+$$
+\begin{align}
+  \text{Price} &= \text{Expenses} + \text{Desired Profit}
+\end{align}
+$$
+
+where,
+
+$$
+\begin{align}
+  \text{Expenses} &= \text{Loss Cost} + \text{Fixed Expenses}
+\end{align}
+$$
+
+Loss cost is the amount of money an insurer will pay out for claims incurred by a insured for a given policy period. However, we do not know an insured's loss cost at point of sale, it is a random quantity. To price insurance we must estimate (predict) an insured's loss cost. We call this estimate the expected loss cost or sometimes pure premium (premium before expense and profit loading).
+
+A Primer on Insurance Product Pricing
+========================================================
+<div class="header">A little more on loss cost</div>
+
+It turns out loss cost itself has two components, each of which is a random quantity.
+
+$$
+\begin{align}
+  \text{Loss Cost} &= \text{Claims Frequency} \cdot \text{Claims Severity}
+\end{align}
+$$
+
+* Claims Frequency: The expected count of claims per policy period
+* Claims Severity: The expected cost of an individual claim
+
+<center>
+<img src="tesla.jpg" alt="tesla" width="350" style="margin:0px 75px"/><img src="money.jpg" alt="money" width="625" style="margin:0px 0px"/>
+<center>
+
+
+A Very Traditional Statistical Approach to Product Pricing
+========================================================
+<div class="header">Predicting loss cost the old way</div>
+
+In the days before digital computing and before many modern advances in statistics, simple methods were used to predict loss cost. Policyholder claims data would be aggregated by several explanatory/predictor variables into what are known as "ratings cells" and very basic statistics would be calculated to estimate loss cost.
+
+$$
+\begin{align}
+  \text{Claims Frequency} &= \frac{\text{Claim Count}}{\text{Exposure}}\\
+  \text{Claims Severity} &= \frac{\text{Claim Cost}}{\text{Claim Count}}\\
+\end{align}
+$$
+
+The next slide shows an example of this methodology. The data used throughout this presentation is publicly available and comes from a major French auto insurer in 2004.
+
+
+
+A Very Traditional Statistical Approach to Product Pricing
+========================================================
+<div class="header">Predicting loss cost the old way</div>
+
+Is there anything suspect with this methodology?
+
+```{r descstats, echo=FALSE}
+#### load R packges ####
+library("CASdatasets")
+library("tidyverse")
+library("knitr")
+
+#### load data ####
+load("~/Documents/stats-projects/ness-teacher-talk/models/tweedieglm.RData")
+
+# aggregate
+aggdf <- df %>% 
+  group_by(Gender, VehUsage, binAge) %>% 
+  summarise(claim_count = sum(ClaimInd),
+            claim_cost = sum(ClaimAmount),
+            exposure = sum(Exposure)) %>% 
+  mutate(severity = ifelse(claim_count>0, claim_cost/claim_count,0),
+         frequency = claim_count/exposure,
+         loss_cost = severity*frequency)
+kable(aggdf[aggdf$Gender=="Male" & aggdf$VehUsage=="Professional",])
+
+
+```
+
+
+A Very Traditional Statistical Approach to Product Pricing
+========================================================
+<div class="header">Predicting loss cost the old way</div>
+
+It turns out that choosing meaningful rating cells and estimating their associated loss costs is more of an art than a science. Actuaries would need to turn to intuition and assumptions choose the variables that define ratings cells and to adjust values that did not seem reasonable, especially for loss cost estimates where exposure is very limited.
+
+<center>
+<img src="tacoma.jpg" alt="tacoma" width="350"/>
+<center>
+
+<div style="text-align: left"> Bad actuarial assumptions are somewhat less dangerous than bad engineering assumptions. This is the famous Tacoma Narrows Bridge otherwise known as "Galloping Gertie".</div>
+
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">Predicting loss cost in the 90s</div>
+
+Fortunately for the insurance industry, statisticians continued to develop useful models and methods throughout the 20th century (they are still at it trust me). Actuaries and other insurance professionals would begrudgingly begin to use these models for product pricing; generally a decade or two after their introduction.
+
+***
+
+<div class="header">The insurance industry modernizing</div>
+
+The image below depicts an actuary fighting with her managers after being told to use R for statistical modeling rather than continuing to create tables in Excel.
+
+![Tina](actuary.jpg)
+
+Just kidding. It is a stock photo from the BLS Occupational Outlook Handbook site on actuarial careers.
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">Predicting loss cost with generalized linear models</div>
+
+One such statistical model is the generalized linear model (GLM). GLMs were developed in the late 1970s and became popular in insurance pricing applications in the 1990s. GLMs and their extensions are still used to this day in insurance pricing.
+
+$$
+\begin{align}
+  \mathbb{E}[Y|\pmb{x}] &= g^{-1}\left(\beta_0 + \pmb{x}'\pmb{\beta}\right)
+\end{align}
+$$
+
+The outcome or dependent variable $Y$ is assumed to be generated from a distribution in the exponential family (more on that in a bit), the row vector $\pmb{x}$ encodes information from a set of predictor variables, $\beta_0$ is a called the model intercept, and the vector $\pmb{\beta}$ represents the regression weights associated with the predictor variables.
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">Typical Insurance Assumptions</div>
+
+Let $N$ be a random variable representing claims counts and $Z$ be a random variable representing claims costs. A popular (and generally useful) assumption in insurance pricing is that realizations of $N$ are generated by a Poisson distribution and $Z$ a gamma distribution.
+$$
+\begin{align}
+  f(n) &= \lambda^{n}\frac{e^{-\lambda}}{n!} \ \text{for } n \ge 0\\
+  f(z) &= \frac{\beta^\alpha}{\Gamma(\alpha)}z^{\alpha-1}e^{-\beta z}\  \text{for } z > 0\\
+\end{align}
+$$
+
+***
+
+<div class="header">Probability Mass and Density Functions</div>
+```{r pmfpdf, echo=FALSE, fig.width=6, fig.height=9, fig.show='hold', fig.align='center'}
+# load packges for plotting pdfs and pmfs easily
+library(ggfortify)
+library(gridExtra)
+# make the plots
+
+gamma_df <- data.frame(x=seq(0,10,0.01), y=dgamma(x=seq(0,10,0.01), shape=2, rate=2), floor=0)
+gamma_plot <- ggplot(data=gamma_df, aes(x=x, y=y)) +
+  geom_ribbon(aes(x=x, ymax=y, ymin=floor),fill="cyan", color="black") +
+  scale_x_continuous(breaks=0:10) +
+  labs(x="z", y = "f(z)", title = expression(paste("Gamma PDF: ", alpha, "=2, ", beta, "=2"))) +
+  theme_light()
+
+pois_df <- data.frame(x=0:10, y=dpois(x=0:10, lambda=3))
+pois_plot <- ggplot(data=pois_df, aes(x=x, y=y)) +
+  geom_col(fill="cyan", color="black") +
+  scale_x_continuous(breaks=0:10) +
+  labs(x="y", y="f(y)", title=expression(paste("Poisson PMF: ", lambda, "=3"))) +
+  theme_light()
+grid.arrange(pois_plot, gamma_plot, ncol=1, nrow=2)
+
+
+```
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">Two models is one too many</div>
+
+For years, the most popular way to model loss cost was to model claims frequency and claims severity separately with two unique models. The claims frequency model would be fit with data from all available policies while the claims severity model would be fit to only the data where claims had occurred.
+
+* Poisson GLM
+$$
+\begin{equation}
+  \lambda_i = e^{\left( \alpha_0 + \pmb{x}_i'\pmb{\alpha} + \log(c_i)\right)}
+\end{equation}
+$$
+
+* Gamma GLM
+$$
+\begin{equation}
+  \theta_i = e^{\left( \beta_0 + \pmb{x}_i'\pmb{\beta}\right)}
+\end{equation}
+$$
+
+* Loss Cost
+$$
+\begin{equation}
+  \mu_i = \lambda_i \theta_i
+\end{equation}
+$$
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">One model to rule them all</div>
+
+As I said, we are fortunate statisticians don't stop thinking. There has to be some distribution out there that can model loss cost directly rather than requiring two sub-models. In fact, such distributions have been discovered. Perhaps the most appropriate for this application is the compound Poisson-gamma distribution.
+
+$$
+\begin{align}
+  N &\sim \text{Poisson}(\lambda)\\
+  Z &\sim \Gamma(\alpha, \beta)\\
+  Y &= \sum_{i=1}^N Z_i
+\end{align}
+$$
+
+Which is a special case of the exponential dispersion model called the Tweedie distribution. Believe it or not, something this dry revolutionized insurance pricing.
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">That was a lot of math. Let's show a practical example...</div>
+
+OK let's translate all that mess into something straight forward. For the Tweedie GLM,
+
+* Expected loss cost for a risk with a policy period of duration $c_i$
+
+$$
+\begin{align}
+  \mu_i &= e^{\beta_0 + \pmb{x}_i'\pmb{\beta} + \log(c_i)} = e^{\beta_0 + \pmb{x}_i'\pmb{\beta}}\cdot c_i
+\end{align}
+$$
+
+
+* Base loss cost for all insureds
+
+$$
+\begin{align}
+  \text{base loss cost} &= e^{\beta_0}
+\end{align}
+$$
+
+* Multiplicative adjustment to the base loss cost for a given risk
+
+$$
+\begin{align}
+  \text{adjustment factor} &= e^{\pmb{x}_i'\pmb{\beta}}
+\end{align}
+$$
+
+It's even easier to understand with pictures though. The next several slides illustrate the results of a Tweedie GLM fit to the French auto claims data.
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">Loss cost relativities: Gender</div>
+
+```{r gendrel, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+# data frame to hold relativities
+reldat <- data.frame(variable=colnames(X), relativity=exp(omega))
+# parse names
+reldat$variable <- gsub(pattern = "Gender.|VehUsage.|binAge.", replacement = "", x = reldat$variable)
+# break into sub-groups
+reldat$effect <- ifelse(reldat$relativity>1, "Increase","Decrease")
+gendrels<- reldat[1:2,]
+usagerels <- reldat[3:6,]
+agerels <- reldat[7:nrow(reldat),]
+# gender plot
+gendplot <- ggplot(data=gendrels, aes(x=variable, y=relativity, fill=effect)) +
+  geom_col(color="black") +
+  geom_hline(yintercept = 1, linetype=2, color="black") +
+  scale_y_continuous(breaks=seq(0,4,.25)) +
+  labs(title=paste("Gender Loss Cost Relativities from Baseline of $", round(exp(omega_0),2)), y="Relativity", x="Gender") +
+  theme_light(base_size = 20) +
+  theme(legend.position="none")
+gendplot
+```
+
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">Loss cost relativities: Vehicle Usage</div>
+
+
+```{r vehrel, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+# usage plot
+usageplot <- ggplot(data=usagerels, aes(x=variable, y=relativity, fill=effect)) +
+  geom_col(color="black") +
+  geom_hline(yintercept = 1, linetype=2, color="black") +
+  scale_y_continuous(breaks=seq(0,4,.25)) +
+  labs(title=paste("Vehicle Usage Loss Cost Relativities from Baseline of $", round(exp(omega_0),2)), y="Relativity", x="Vehicle Usage") +
+  theme_light(base_size = 20) +
+  theme(legend.position="none")
+usageplot
+```
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">Loss cost relativities: Driver Age</div>
+
+```{r agerel, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+# age plot
+agerels$variable <- factor(agerels$variable, levels = agerels$variable[order(1:10)])
+ageplot <- ggplot(data=agerels, aes(x=variable, y=relativity, fill=effect)) +
+  geom_col(color="black") +
+  geom_hline(yintercept = 1, linetype=2, color="black") +
+  scale_y_continuous(breaks=seq(0,4,.25)) +
+  labs(title=paste("Age Loss Cost Relativities from Baseline of $", round(exp(omega_0),2)), y="Relativity", x="Age") +
+  theme_light(base_size = 20) +
+  theme(legend.position="none")
+ageplot
+```
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">GLMs have their limitations</div>
+
+The Tweedie GLM is still a common model used to predict loss cost in the insurance industry. It can be used to produce ratings plans that are easy to interpret. However it is not without its limitations including but not limited to,
+
+* All potential relationships between the predictor variables and expected loss cost need to be defined explicitly
+* Complicated non-linear relationships may be difficult to model adequately
+* Interaction terms need to be defined explicitly
+
+When dealing with potentially thousands of variables this can be quite cumbersome.
+
+A Better Statistical Approach to Product Pricing
+========================================================
+<div class="header">Non-linear relationship</div>
+
+```{r nonlin, echo=FALSE, fig.width=9, fig.height=9, fig.show='hold', fig.align='center' }
+nonlin <- data.frame(x=seq(-3,3,0.01), y = sin(seq(-3,3,0.01)))
+nonlin$ynoise <- nonlin$y + rnorm(n = nrow(nonlin), mean = 0, sd = 0.5)
+nonlinplot <- ggplot(data=nonlin, aes(x=x, y=ynoise)) +
+  geom_point(alpha=0.7, size=2.5) +
+  geom_line(aes(x=x, y=y), color="red", size=2) +
+  labs(x="x", y="f(x)", title="A Non-Linear Trend") +
+  theme_light(base_size = 20) 
+nonlinplot
+```
+
+***
+<div class="header">Interaction effect</div>
+
+
+```{r interact, echo=FALSE, fig.width=9, fig.height=9, fig.show='hold', fig.align='center' }
+library(lattice)
+interactdf <- expand.grid(x1=seq(0,10,.5), x2 = seq(0,10,0.5))
+interactdf$y = interactdf$x1*2 + interactdf$x2*2 - 0.5*interactdf$x1*interactdf$x2
+# intermatx <- as.matrix(dcast(data=interactdf, x1~x2, value.var = "y"))[,-1]
+# persp(x=seq(0,10,0.5), y=seq(0,10,0.5), z=intermatx, phi =25, theta = 65)
+wireframe(y ~ x1*x2, data = interactdf,
+  xlab = "X1", ylab = "X2", zlab="Y",
+  main = "Regression Surface: Y = 2X1 + 2X2 -0.5(X1X2)",
+  drape = TRUE,
+  colorkey = TRUE,
+  screen = list(z = -15, x = -55))
+rm(list = ls())
+```
+
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Introduction to statistical learning</div>
+
+Statistical learning is a branch of (some would argue synonym for) machine learning (ML) that uses statistical theory and algorithms to automatically discover patterns and relationships in data. After learning from observed data, statistical learning models can make predictions about future events without explicit instructions from a human programmer.
+
+Machine learning can be viewed as a subset of artificial intelligence (AI).
+
+***
+<div class="header">Some machines learn too much</div>
+
+<center>
+![Arnold](arnold.jpg)
+<center>
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Introduction to statistical learning</div>
+
+To predict insurance loss costs we use what are called supervised learning algorithms. Supervised learning methods attempt to learn functions that map input information to outputs.
+
+$$
+\begin{align}
+  y_i &= f(\pmb{x}_i) + \epsilon_i
+\end{align}
+$$
+
+In our example we estimate a function that maps predictor variable values to expected auto insurance loss cost.
+
+$$
+\begin{align}
+  \hat{y_i} &= \widehat{f}(\text{License Age}_i,...,\text{Max Speed}_i)
+\end{align}
+$$
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Gradient boosting machines</div>
+
+We will use gradient boosting machines (GBM) with a Tweedie loss function to build a predictive model for loss cost.
+
+![GBM](pcmuJ.png)
+
+Trust me, GBMs are interesting and work very well for insurance pricing data...
+
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Variable importance</div>
+
+The GBM can give provide us with an assessment of variable importance. These are the variables that when their values change, have the largest impact on change in predictions.
+
+```{r varimp, echo=FALSE, fig.width=14, fig.height=6, fig.show='hold', fig.align='center' }
+# load packges
+library(TDboost)
+# load gmb model and data
+load("~/Documents/stats-projects/ness-teacher-talk/models/tweediegbm.RData")
+sumdat <- summary(tb, n.trees =1000, plotit=FALSE)
+sumdat$var <- factor(sumdat$var, levels = sumdat$var[order(sumdat$rel.inf,decreasing = TRUE)])
+importplot <- ggplot(sumdat, aes(x=var, y=rel.inf)) +
+  geom_col() +
+  labs(x="variable", y="relative importance", title = "GBM Variable Importance") +
+  theme_light(base_size = 20)
+importplot
+```
+
+The following slides show the marginal effects of each predictor variable on predicted loss cost.
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Partial dependence</div>
+
+```{r pd1, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+plot.TDboost(x=tb,i.var=1,n.trees=1000, col="red", lwd=3, main="Partial Dependence Plot for License Age")
+```
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Partial dependence</div>
+
+```{r pd3, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+plot.TDboost(x=tb,i.var=7,n.trees=1000, col="red", lwd=3, main="Partial Dependence Plot for Vehicle Max Speed", las=2)
+```
+
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Partial dependence</div>
+
+```{r pd2, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+plot.TDboost(x=tb,i.var=2,n.trees=1000, col="red", lwd=3, main="Partial Dependence Plot for Vehicle Age")
+```
+
+
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Partial dependence</div>
+
+```{r pd4, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+plot.TDboost(x=tb,i.var=6,n.trees=1000, col="red", lwd=3, main="Partial Dependence Plot for Vehicle Body Type", las=2)
+```
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Partial dependence</div>
+
+```{r pd5, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+plot.TDboost(x=tb,i.var=5,n.trees=1000, col="red", lwd=3, main="Partial Dependence Plot for Driver Age")
+```
+
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Partial dependence</div>
+
+```{r pd7, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+plot.TDboost(x=tb,i.var=4,n.trees=1000, col="red", lwd=3, main="Partial Dependence Plot for Vehicle Usage")
+```
+
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+<div class="header">Partial dependence</div>
+
+```{r pd6, echo=FALSE, fig.width=14, fig.height=9, fig.show='hold', fig.align='center' }
+plot.TDboost(x=tb,i.var=3,n.trees=1000, col="red", lwd=3, main="Partial Dependence Plot for Gender")
+```
+
+A Statistical Learning Approach to Product Pricing
+========================================================
+
+<div class="header">OK that's enough slides for a bit. Let's turn this model into something useful.</div>
+
+
+<center>
+<img src="shiny.png" alt="rshiny" width="800"/>
+<center>
+
+
+
+Beyond Modeling: The Role of the Modern Data Scientist
+========================================================
+<div class="header">We don't just fit models</div>
+
+Data science is a rapidly changing field. In addition to fitting statistical and machine learning models, a data scientist must be familiar with,
+
+* Database design and programming languages
+* Software engineering principles
+  * OOP, program design, version control, DevOps
+* Presenting findings to non-technical audiences
+
+***
+<div class="header">At the center of every Venn diagram</div>
+
+<center>
+![doitall](venn.png)
+<center>
+
+For the Aspiring Data Scientist
+========================================================
+<div class="header">How to become a data scientist</div>
+
+1. Complete an undergraduate degree with a strong quantitative focus
+    * Statistics, Mathematics, Computer Science, Physics, Electrical Engineering, Economics (focus on econometrics)
+2. Complete a graduate degree
+    * PhD or MS in Statistics, Computer Science or a related field with relevant coursework and research
+3. Learn to code
+    * R, Python, Java, Scala, SQL
+4. Show that you can do useful things
+    * Complete internships
+    * Publish research
+    * Open a GitHub account and create cool things
+    
+For the Aspiring Data Scientist
+========================================================
+<div class="header">Some resources</div>
+
+* Coursera: https://www.coursera.org/
+  * Free and paid online courses which includes topics in math, statistics, data science, computer science and more
+* Data Camp: https://www.datacamp.com/
+  * Free and paid online courses with an emphasis on practical data science in R and Python
+* GitHub: https://github.com/
+  * Host and manage git repositories
+* New England Statistical Society: https://nestat.org/
+  * We're just getting started, but we will start providing education materials for aspiring data scientists as well
+
+
